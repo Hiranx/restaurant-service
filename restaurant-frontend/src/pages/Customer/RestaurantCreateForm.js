@@ -196,7 +196,7 @@ const RestaurantCreateForm = () => {
                         <div className="mb-4">
                             <label className="block text-gray-700 mb-2">Location*</label>
                             <LoadScript
-                                googleMapsApiKey="AIzaSyDHfMbYidzFY0ravK3AOEgH5X7ZpxYFbqY"
+                                googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
                                 libraries={libraries}
                                 loadingElement={<div>Loading...</div>}
                                 onLoad={() => setScriptLoaded(true)}
