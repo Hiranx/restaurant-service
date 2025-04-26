@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: mongodb+srv://mendisdumindu21:spendWise@cluster0.zf3phab.mongodb.net/restaurant_db?retryWrites=true&w=majority&appName=Cluster0
+      uri: mongodb+srv://hiran9204:1234@cluster0.4sfue.mongodb.net/restaurant_db?retryWrites=true&w=majority&appName=Cluster0
   servlet:
     multipart:
       max-file-size: 10MB
