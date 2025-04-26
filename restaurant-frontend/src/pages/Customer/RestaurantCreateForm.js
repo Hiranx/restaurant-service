@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { LoadScript, GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
+
+// Define libraries to load
+const libraries = ['places'];
 
 const RestaurantCreateForm = () => {
     const [formData, setFormData] = useState({
         name: '',
-        address: '',
+        formattedAddress: '',
+        latitude: 0,
+        longitude: 0,
         contactNumber: '',
         cuisineType: '',
         openingTime: '09:00',
@@ -16,6 +22,46 @@ const RestaurantCreateForm = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [autocomplete, setAutocomplete] = useState(null);
+    const [mapCenter, setMapCenter] = useState({
+        lat: 6.9271,  // Default center (Colombo)
+        lng: 79.8612
+    });
+    const [scriptLoaded, setScriptLoaded] = useState(false);
+
+    const handlePlaceSelect = useCallback(() => {
+        if (autocomplete) {
+            const place = autocomplete.getPlace();
+            if (!place.geometry) {
+                console.log("No geometry for this place");
+                return;
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                formattedAddress: place.formatted_address,
+                latitude: place.geometry.location.lat(),
+                longitude: place.geometry.location.lng()
+            }));
+
+            setMapCenter({
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng()
+            });
+        }
+    }, [autocomplete]);
+
+    const onLoad = useCallback((autocomplete) => {
+        setAutocomplete(autocomplete);
+    }, []);
+
+    const onMapClick = useCallback((e) => {
+        setFormData(prev => ({
+            ...prev,
+            latitude: e.latLng.lat(),
+            longitude: e.latLng.lng()
+        }));
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -36,23 +82,54 @@ const RestaurantCreateForm = () => {
         setSuccess(false);
 
         try {
-            // Create FormData for multipart request
+            // Validate required fields
+            if (!formData.name || !formData.formattedAddress || !formData.contactNumber ||
+                !formData.cuisineType || !formData.email || !formData.restaurantPassword) {
+                throw new Error('All required fields must be filled');
+            }
+
+            // Validate coordinates
+            if (formData.latitude === 0 || formData.longitude === 0) {
+                throw new Error('Please select a valid location on the map');
+            }
+
             const formDataToSend = new FormData();
-            formDataToSend.append('restaurant', JSON.stringify(formData));
+
+            // Create restaurant JSON object
+            const restaurantData = {
+                name: formData.name,
+                formattedAddress: formData.formattedAddress,
+                latitude: formData.latitude,
+                longitude: formData.longitude,
+                contactNumber: formData.contactNumber,
+                cuisineType: formData.cuisineType,
+                openingTime: formData.openingTime,
+                closingTime: formData.closingTime,
+                email: formData.email,
+                restaurantPassword: formData.restaurantPassword,
+                description: formData.description || ''
+            };
+
+            // Append as JSON blob
+            const restaurantBlob = new Blob([JSON.stringify(restaurantData)], {
+                type: 'application/json'
+            });
+            formDataToSend.append('restaurant', restaurantBlob);
             if (coverImage) {
                 formDataToSend.append('coverImage', coverImage);
             }
 
-            // Make API call using fetch
             const response = await fetch('http://localhost:8081/restaurants/create', {
                 method: 'POST',
                 body: formDataToSend,
-                // Don't set Content-Type header manually for FormData
-                // The browser will set it automatically with the correct boundary
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('Backend validation errors:', errorData);
                 throw new Error(errorData.message || 'Failed to create restaurant');
             }
 
@@ -60,10 +137,12 @@ const RestaurantCreateForm = () => {
             setSuccess(true);
             console.log('Restaurant created:', responseData);
 
-            // Reset form after successful submission
+            // Reset form
             setFormData({
                 name: '',
-                address: '',
+                formattedAddress: '',
+                latitude: 0,
+                longitude: 0,
                 contactNumber: '',
                 cuisineType: '',
                 openingTime: '09:00',
@@ -115,14 +194,68 @@ const RestaurantCreateForm = () => {
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-2">Address*</label>
+                            <label className="block text-gray-700 mb-2">Location*</label>
+                            <LoadScript
+                                googleMapsApiKey="AIzaSyDHfMbYidzFY0ravK3AOEgH5X7ZpxYFbqY"
+                                libraries={libraries}
+                                loadingElement={<div>Loading...</div>}
+                                onLoad={() => setScriptLoaded(true)}
+                                onError={(error) => console.error("Google Maps error:", error)}
+                            >
+                                <Autocomplete
+                                    onLoad={onLoad}
+                                    onPlaceChanged={handlePlaceSelect}
+                                >
+                                    <input
+                                        type="text"
+                                        name="formattedAddress"
+                                        value={formData.formattedAddress}
+                                        onChange={handleChange}
+                                        className="w-full p-2 border rounded"
+                                        placeholder="Search for a location"
+
+                                    />
+                                </Autocomplete>
+                            </LoadScript>
+
+                            <div className="mt-4 h-64">
+                                {scriptLoaded ? (
+                                    <GoogleMap
+                                        mapContainerStyle={{ width: '100%', height: '100%' }}
+                                        center={mapCenter}
+                                        zoom={15}
+                                        onClick={onMapClick}
+                                        options={{
+                                            streetViewControl: false,
+                                            mapTypeControl: false,
+                                            fullscreenControl: false
+                                        }}
+                                    >
+                                        {(formData.latitude && formData.longitude) && (
+                                            <Marker
+                                                position={{
+                                                    lat: formData.latitude,
+                                                    lng: formData.longitude
+                                                }}
+                                            />
+                                        )}
+                                    </GoogleMap>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center bg-gray-100">
+                                        Loading map...
+                                    </div>
+                                )}
+                            </div>
+
                             <input
-                                type="text"
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                className="w-full p-2 border rounded"
-                                required
+                                type="hidden"
+                                name="latitude"
+                                value={formData.latitude}
+                            />
+                            <input
+                                type="hidden"
+                                name="longitude"
+                                value={formData.longitude}
                             />
                         </div>
 
@@ -206,6 +339,7 @@ const RestaurantCreateForm = () => {
                                 onChange={handleChange}
                                 className="w-full p-2 border rounded"
                                 required
+                                minLength="8"
                             />
                         </div>
                     </div>

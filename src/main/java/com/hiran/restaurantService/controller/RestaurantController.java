@@ -1,7 +1,9 @@
 package com.hiran.restaurantService.controller;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hiran.restaurantService.client.OrderServiceClient;
 import com.hiran.restaurantService.dto.RestaurantDTO;
 import com.hiran.restaurantService.entity.MenuItem;
 import com.hiran.restaurantService.entity.Restaurant;
@@ -27,6 +29,9 @@ public class RestaurantController {
     private RestaurantService restaurantService;
 
     @Autowired
+    private OrderServiceClient orderServiceClient;
+
+    @Autowired
     private MenuService menuService;
 
     private final ObjectMapper objectMapper;
@@ -45,7 +50,7 @@ public class RestaurantController {
     }
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Restaurant> createRestaurant(
+    public ResponseEntity<?> createRestaurant(
             @RequestPart("restaurant") String restaurantJson,
             @RequestPart(value = "coverImage", required = false) MultipartFile coverImage) {
 
@@ -53,15 +58,43 @@ public class RestaurantController {
             // Add proper logging
             logger.debug("Received restaurant JSON: {}", restaurantJson);
 
-            // Configure ObjectMapper to fail on unknown properties
+            // Configure ObjectMapper
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-            RestaurantDTO restaurantDTO = objectMapper.readValue(restaurantJson, RestaurantDTO.class);
-            logger.debug("Parsed restaurant DTO: {}", restaurantDTO);
+            // Parse the JSON to get the restaurant data
+            JsonNode rootNode = objectMapper.readTree(restaurantJson);
+
+            // Create DTO and set values
+            RestaurantDTO restaurantDTO = new RestaurantDTO();
+            restaurantDTO.setName(rootNode.path("name").asText());
+            restaurantDTO.setFormattedAddress(rootNode.path("formattedAddress").asText());
+            restaurantDTO.setContactNumber(rootNode.path("contactNumber").asText());
+            restaurantDTO.setCuisineType(rootNode.path("cuisineType").asText());
+            restaurantDTO.setOpeningTime(rootNode.path("openingTime").asText());
+            restaurantDTO.setClosingTime(rootNode.path("closingTime").asText());
+            restaurantDTO.setEmail(rootNode.path("email").asText());
+            restaurantDTO.setRestaurantPassword(rootNode.path("restaurantPassword").asText());
+
+            // Handle location data - two possible approaches:
+            // Option 1: If location is sent as a complete GeoJSON object
+            if (rootNode.has("location")) {
+                JsonNode locationNode = rootNode.path("location");
+                if (locationNode.has("coordinates") && locationNode.path("coordinates").isArray()) {
+                    restaurantDTO.setLongitude(locationNode.path("coordinates").get(0).asDouble());
+                    restaurantDTO.setLatitude(locationNode.path("coordinates").get(1).asDouble());
+                }
+            }
+            // Option 2: If latitude/longitude are sent as separate fields
+            else {
+                restaurantDTO.setLatitude(rootNode.path("latitude").asDouble());
+                restaurantDTO.setLongitude(rootNode.path("longitude").asDouble());
+            }
+
+            logger.debug("Parsed restaurant DTO with location: lat={}, long={}",
+                    restaurantDTO.getLatitude(), restaurantDTO.getLongitude());
 
             Restaurant createdRestaurant = restaurantService.createRestaurant(restaurantDTO, coverImage);
-
             return ResponseEntity.ok(createdRestaurant);
 
         } catch (Exception e) {
@@ -90,4 +123,35 @@ public class RestaurantController {
         restaurantService.deleteRestaurant(id);
     }
 
+    @PutMapping("/{orderId}/confirm")
+    public String confirmOrder(@PathVariable String orderId) {
+        return orderServiceClient.updateOrderStatus(
+                orderId,
+                "RESTAURANT_CONFIRMED"  // Hardcoded status (or pass dynamically)
+        );
+    }
+
+    @PutMapping("/{orderId}/preparing")
+    public String markAsPreparing(@PathVariable String orderId) {
+        return orderServiceClient.updateOrderStatus(
+                orderId,
+                "PREPARING"
+        );
+    }
+
+    @PutMapping("/{orderId}/ready")
+    public String markAsReady(@PathVariable String orderId) {
+        return orderServiceClient.updateOrderStatus(
+                orderId,
+                "READY_FOR_PICKUP"
+        );
+    }
+
+    @PutMapping("/{orderId}/cancel")
+    public String markAsCancel(@PathVariable String orderId) {
+        return orderServiceClient.updateOrderStatus(
+                orderId,
+                "CANCELLED"
+        );
+    }
 }
