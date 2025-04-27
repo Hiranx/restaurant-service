@@ -1,13 +1,13 @@
 const API_BASE_URL = 'http://localhost:8081';
 
 export const getMenuItems = async (restaurantId) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu`);
+    const response = await fetch(`${API_BASE_URL}/api/public/restaurants/${restaurantId}/menu`);
     if (!response.ok) throw new Error('Failed to fetch menu items');
     return await response.json();
 };
 
 export const addMenuItem = async (restaurantId, menuItem) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu`, {
+    const response = await fetch(`${API_BASE_URL}/api/owner/restaurants/${restaurantId}/menu`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -20,7 +20,7 @@ export const addMenuItem = async (restaurantId, menuItem) => {
 };
 
 export const updateMenuItem = async (restaurantId, itemId, menuItem) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu/${itemId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/owner/restaurants/${restaurantId}/menu/${itemId}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const updateMenuItem = async (restaurantId, itemId, menuItem) => {
 };
 
 export const deleteMenuItem = async (restaurantId, itemId) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu/${itemId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/owner/restaurants/${restaurantId}/menu/${itemId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -44,7 +44,7 @@ export const deleteMenuItem = async (restaurantId, itemId) => {
 
 // In menuApi.js
 export const toggleItemAvailability = async (restaurantId, itemId) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/${restaurantId}/menu/${itemId}/availability`, {
+    const response = await fetch(`${API_BASE_URL}/api/owner/restaurants/${restaurantId}/menu/${itemId}/availability`, {
         method: 'PATCH',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

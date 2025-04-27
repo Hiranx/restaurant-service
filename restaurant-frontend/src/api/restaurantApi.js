@@ -1,13 +1,13 @@
 const API_BASE_URL = 'http://localhost:8081';
 
 export const getAllRestaurants = async () => {
-    const response = await fetch(`${API_BASE_URL}/restaurants`);
+    const response = await fetch(`${API_BASE_URL}/api/public/restaurants`);
     if (!response.ok) throw new Error('Failed to fetch restaurants');
     return await response.json();
 };
 
 export const getRestaurantById = async (id) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/view/${id}`);
+    const response = await fetch(`${API_BASE_URL}/api/public/restaurants/${id}`);
     if (!response.ok) throw new Error('Failed to fetch restaurant');
     return await response.json();
 };
@@ -26,7 +26,7 @@ export const createRestaurant = async (restaurantData) => {
 };
 
 export const updateRestaurant = async (id, restaurantData) => {
-    const response = await fetch(`${API_BASE_URL}/restaurants/update/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/owner/restaurants/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',

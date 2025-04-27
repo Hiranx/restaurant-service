@@ -1,7 +1,7 @@
 const API_BASE_URL = 'http://localhost:8081'; // Update with your backend URL
 
 export const getPendingRestaurants = async () => {
-    const response = await fetch(`${API_BASE_URL}/app-admin/pending`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/restaurants/pending"`, {
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -11,7 +11,7 @@ export const getPendingRestaurants = async () => {
 };
 
 export const updateApprovalStatus = async (id, approved) => {
-    const response = await fetch(`${API_BASE_URL}/app-admin${id}/approval?approved=${approved}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/restaurants/${id}/approval?approved=${approved}`, {
         method: 'PATCH',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

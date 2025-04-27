@@ -119,7 +119,7 @@ const RestaurantCreateForm = () => {
                 formDataToSend.append('coverImage', coverImage);
             }
 
-            const response = await fetch('http://localhost:8081/restaurants/create', {
+            const response = await fetch('http://localhost:8081/api/public/restaurants/create', {
                 method: 'POST',
                 body: formDataToSend,
                 headers: {
